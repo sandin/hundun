@@ -6,6 +6,7 @@ import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import java.io.*;
@@ -20,7 +21,7 @@ public class Hundun {
 
     public Hundun(CommandLine options) {
         this.cmdLine = options;
-        this.debug = options.hasOption("v");
+        this.debug = options.hasOption("verbose");
     }
 
     public boolean debug() {
@@ -89,9 +90,12 @@ public class Hundun {
         ClassWriter cw = new ClassWriter(cr, 0);
         ClassVisitor cv = cw;
         if (debug) {
-            PrintWriter printWriter = new PrintWriter(System.out);
-            cv = new TraceClassVisitor(cw, printWriter);
+            cv = new TraceClassVisitor(cw, new PrintWriter(System.out));
         }
+        if (cmdLine.hasOption("verify")) {
+            cv = new CheckClassAdapter(cv);
+        }
+
         RenameObfuscator ca = new RenameObfuscator(cv);
         cr.accept(ca, 0);
         ret.data = cw.toByteArray();
