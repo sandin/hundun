@@ -53,7 +53,6 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
             classNameGenerators.put(packageName, classNameGenerator);
         }
         String newName = packageName + "/" + classNameGenerator.nextName();
-        System.out.println("RenameObfuscator: " + name + " -> " + newName);
         className = name;
         classNameMap.put(name, newName);
         super.visit(version, access, newName, signature, superName, interfaces);
@@ -94,17 +93,14 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
         @Override
         public void visitLocalVariable(String name, String descriptor, String signature, Label start, Label end, int index) {
             if (!"this".equals(name)) {
-                System.out.println("visitLocalVariable: " + name + " " + descriptor);
                 name = varNameGenerator.nextName();
 
                 Type type = Type.getType(descriptor); // TODO: array?
                 String className = type.getInternalName();
-                System.out.println("className: " + className);
                 String newClassName = classNameMap.get(className);
                 if (newClassName != null) {
                     type = Type.getObjectType(newClassName);
                     descriptor = type.getDescriptor();
-                    System.out.println("descriptor: " + descriptor);
                 }
             }
             super.visitLocalVariable(name, descriptor, signature, start, end, index);
@@ -140,21 +136,11 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
             } else {
                 String newMethod = methodNameMap.get(owner + "." + name + descriptor);
                 if (newMethod != null) {
-                    System.out.println("====");
-
-                    System.out.println("owner: " + owner);
-                    System.out.println("name: " + name);
-                    System.out.println("descriptor: " + descriptor);
-
-                    System.out.println("newMethod: " + newMethod);
                     int idx = newMethod.lastIndexOf(".");
                     owner = newMethod.substring(0, idx);
                     int idx2 = newMethod.lastIndexOf("(");
                     name = newMethod.substring(idx + 1, idx2);
                     descriptor = newMethod.substring(idx2);
-                    System.out.println("owner: " + owner);
-                    System.out.println("name: " + name);
-                    System.out.println("descriptor: " + descriptor);
                 }
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);

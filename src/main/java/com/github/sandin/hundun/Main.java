@@ -8,7 +8,6 @@ import java.awt.font.OpenType;
 import java.io.File;
 
 public class Main {
-    private static final boolean DEBUG = true;
 
     public static void main(String[] args) {
         // arguments
@@ -16,6 +15,7 @@ public class Main {
         options.addOption(Option.builder("i").longOpt("input").desc("input jar file").hasArg().required().build());
         options.addOption(Option.builder("o").longOpt("output").desc("output jar file").hasArg().required().build());
         options.addOption(Option.builder("f").longOpt("filter").desc("class name filter").hasArg().build());
+        options.addOption(Option.builder("v").longOpt("verbose").desc("debug message").build());
 
         // parse arguments
         CommandLineParser parser = new DefaultParser();
@@ -38,7 +38,7 @@ public class Main {
         try {
             hundun.obfuscate();
         } catch (HundunException e) {
-            if (DEBUG) {
+            if (hundun.debug()) {
                 e.printStackTrace();
             }
             System.out.println(e.getMessage());
