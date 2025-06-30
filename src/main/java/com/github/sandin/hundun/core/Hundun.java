@@ -16,16 +16,24 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class Hundun {
-    private final boolean debug;
+    public static final int LOG_INFO = 0;
+    public static final int LOG_DEBUG = 1;
+    public static final int LOG_VERBOSE = 2;
+
+    private final int logLevel;
     private final CommandLine cmdLine;
 
-    public Hundun(CommandLine options) {
+    public Hundun(CommandLine options, int logLevel) {
         this.cmdLine = options;
-        this.debug = options.hasOption("verbose");
+        this.logLevel = logLevel;
     }
 
     public boolean debug() {
-        return this.debug;
+        return this.logLevel >= LOG_DEBUG;
+    }
+
+    public boolean verbose() {
+        return this.logLevel >= LOG_VERBOSE;
     }
 
     public boolean obfuscate() throws HundunException {
@@ -81,7 +89,7 @@ public class Hundun {
         cr.accept(cw, 0);
         byte[] b2 = cw.toByteArray(); // b2 represents the same class as b1
         */
-        if (debug) {
+        if (debug()) {
             System.out.println("modify Class: " + data.className);
         }
 
@@ -89,7 +97,7 @@ public class Hundun {
         ClassReader cr = new ClassReader(data.data);
         ClassWriter cw = new ClassWriter(cr, 0);
         ClassVisitor cv = cw;
-        if (debug) {
+        if (verbose()) {
             cv = new TraceClassVisitor(cw, new PrintWriter(System.out));
         }
         if (cmdLine.hasOption("verify")) {
@@ -97,7 +105,7 @@ public class Hundun {
         }
 
         RenameObfuscator ca = new RenameObfuscator(cv);
-        cr.accept(ca, 0);
+        cr.accept(ca, ClassReader.EXPAND_FRAMES);
         ret.data = cw.toByteArray();
         ret.className = ca.getNewClassName();
 

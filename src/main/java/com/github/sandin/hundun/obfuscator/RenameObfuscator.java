@@ -1,12 +1,11 @@
 package com.github.sandin.hundun.obfuscator;
 
+import com.github.sandin.hundun.utils.OpcodeUtils;
 import com.github.sandin.hundun.utils.SimpleNameGenerator;
 import org.objectweb.asm.*;
+import org.objectweb.asm.commons.AnalyzerAdapter;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class RenameObfuscator extends ClassVisitor implements Opcodes {
     private static Map<String, SimpleNameGenerator> classNameGenerators = new HashMap<>();
@@ -44,8 +43,13 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
         return classNameMap.get(className);
     }
 
+    private String owner;
+
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        owner = name;
+        System.out.println("visit: " + name);
+
         String packageName = name.lastIndexOf("/") != -1 ? name.substring(0, name.lastIndexOf("/")) : "defaultPackage";
         SimpleNameGenerator classNameGenerator = classNameGenerators.get(packageName);
         if (classNameGenerator == null) {
@@ -72,6 +76,7 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
 
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+        System.out.println("\nvisitMethod: " + name);
         if (!objectMethods.contains(name)) {
             String newClassName = classNameMap.get(className);
             String newName = methodNameGenerator.nextName();
@@ -80,14 +85,49 @@ public class RenameObfuscator extends ClassVisitor implements Opcodes {
         }
 
         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
-        return new RenameMethodVisitor(mv);
+        return new RenameMethodVisitor(owner, access, name, descriptor, mv);
     }
 
-    private class RenameMethodVisitor extends MethodVisitor {
+    //private class RenameMethodVisitor extends MethodVisitor {
+    private class RenameMethodVisitor extends AnalyzerAdapter {
         private SimpleNameGenerator varNameGenerator = new SimpleNameGenerator();
+        private int labelCount = 0;
 
-        protected RenameMethodVisitor(MethodVisitor methodVisitor) {
-            super(ASM9, methodVisitor);
+        protected RenameMethodVisitor(String owner, int access, String name, String desc, MethodVisitor methodVisitor) {
+            super(ASM9, owner, access, name, desc, methodVisitor);
+        }
+
+        @Override
+        public void visitMaxs(int maxStack, int maxLocals) {
+            System.out.println("visitMaxs: maxLocals=" + maxLocals + ", maxStack=" + maxStack);
+            super.visitMaxs(maxStack, maxLocals);
+        }
+
+        @Override
+        public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
+            System.out.println("visitFrame: type=" + OpcodeUtils.frameType2str(type)
+                    + ", numLocal=" + numLocal + ", local=" + OpcodeUtils.stackMapFrames2str(local)
+                    + ", numStack=" + numStack + ", stack=" + OpcodeUtils.stackMapFrames2str(stack));
+            super.visitFrame(type, numLocal, local, numStack, stack);
+        }
+
+        @Override
+        public void visitLabel(Label label) {
+            System.out.println("visitLabel, label=" + labelCount++);
+
+            if (locals != null) {
+                System.out.println("localVars: " + OpcodeUtils.stackMapFrames2str(locals.toArray()));
+            }
+            if (stack != null) {
+                System.out.println("stack: " + OpcodeUtils.stackMapFrames2str(stack.toArray()));
+            }
+            super.visitLabel(label);
+        }
+
+        @Override
+        public void visitLineNumber(int line, Label start) {
+            System.out.println("visitLineNumber, line=" + line);
+            super.visitLineNumber(line, start);
         }
 
         @Override
